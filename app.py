@@ -2,7 +2,8 @@
 import streamlit as st
 import pandas as pd
 from pathlib import Path
-from datetime import date
+from datetime import date, datetime
+from zoneinfo import ZoneInfo
 
 # ==================== CONFIG ====================
 st.set_page_config(page_title="Plan Kangkung PRO", page_icon="Leaf", layout="wide")
@@ -27,6 +28,13 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
+# === SET WAKTU JAKARTA ===
+jakarta_tz = ZoneInfo("Asia/Jakarta")
+today = datetime.now(jakarta_tz).date()           # hanya tanggal
+now_jakarta = datetime.now(jakarta_tz)            # tanggal + jam (kalau butuh)
+
+st.write(f"Tanggal hari ini (WIB): **{today.strftime('%d-%m-%Y')}**")
+
 # ==================== BACA DATA ====================
 file = Path("Plan_Kangkung_Daily.xlsx")
 if not file.exists():
@@ -41,7 +49,8 @@ for col in date_cols:
     if col in df.columns:
         df[col] = pd.to_datetime(df[col], errors="coerce", dayfirst=True)
 
-today = date.today()
+#WIB
+df_today = df[df["tanggal"].dt.date == today]
 
 # ==================== FUNGSI KEBUN ====================
 def get_kebun(bedeng):
