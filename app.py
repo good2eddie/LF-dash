@@ -2,7 +2,7 @@
 import streamlit as st
 import pandas as pd
 from pathlib import Path
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from zoneinfo import ZoneInfo
 
 # ==================== CONFIG ====================
@@ -179,6 +179,68 @@ with st.expander("Bedeng Aktif Saat Ini", expanded=False):
     styled = view.style.applymap(color_aktif, subset=["Umur (hari)"])
     st.dataframe(styled, use_container_width=True, hide_index=True)
     st.caption(f"Total bedeng aktif: **{len(df_aktif)}**")
+
+from datetime import datetime, timedelta
+
+# ==================== HASIL PANEN (SECTION BARU) ===============
+
+with st.expander("Hasil Panen", expanded=False):
+
+    # --- Default tanggal: kemarin ---
+    default_tgl = (datetime.now() - timedelta(days=1)).date()
+
+    colA, colB = st.columns([2, 10])
+
+    with colA:
+        tgl_filter = st.date_input(
+            "Tanggal Panen",
+            value=default_tgl
+        )
+
+    # --- Prepare df_hasil ---
+    df_hasil = df.copy()
+
+    # --- Konversi datetime ---
+    df_hasil["panen_aktual"] = pd.to_datetime(df_hasil["panen_aktual"], errors="coerce")
+    df_hasil["tanggal"] = pd.to_datetime(df_hasil["tanggal"], errors="coerce")
+
+    # --- Ambil hanya yang punya panen aktual ---
+    df_hasil = df_hasil[df_hasil["panen_aktual"].notna()].copy()
+
+    # --- Filter berdasarkan tanggal panen ---
+    df_hasil = df_hasil[df_hasil["panen_aktual"].dt.date == tgl_filter]
+
+    # --- Batasi 10 baris ---
+    df_hasil = df_hasil.sort_values("panen_aktual").head(10)
+
+    # --- Hitung umur panen ---
+    df_hasil["umur_panen"] = (df_hasil["panen_aktual"] - df_hasil["tanggal"]).dt.days
+
+    if df_hasil.empty:
+        st.info("Tidak ada data panen untuk tanggal tersebut.")
+    else:
+        # --- Siapkan tampilan utama ---
+        df_view = df_hasil[[
+            "panen_aktual", "kebun", "bedeng", "umur_panen",
+            "gross", "net", "waste"
+        ]].copy()
+
+        df_view["panen_aktual"] = df_view["panen_aktual"].dt.strftime("%d/%m/%Y")
+
+        st.dataframe(df_view, use_container_width=True, hide_index=True)
+
+        # ==================== TOTAL ====================
+        st.markdown("### Total")
+
+        total_gross = df_hasil["gross"].sum()
+        total_net = df_hasil["net"].sum()
+        total_waste = df_hasil["waste"].sum()
+
+        col1, col2, col3 = st.columns(3)
+
+        col1.metric("Total Gross", f"{total_gross:,.2f}")
+        col2.metric("Total Net", f"{total_net:,.2f}")
+        col3.metric("Total Waste", f"{total_waste:,.2f}")
 
 # ==================== TABEL LENGKAP ====================
 with st.expander("Tabel Lengkap Semua Data (Riwayat)", expanded=False):
