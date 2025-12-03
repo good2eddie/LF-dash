@@ -113,12 +113,19 @@ with c1:
 
 with c2:
     with st.expander(f"Penanaman Hari Ini — {tanam_date.strftime('%d/%m/%Y')}", expanded=True):
+
         tanam_hari_ini = df[df["tanggal"].dt.date == tanam_date]
+
         if not tanam_hari_ini.empty:
             for _, r in tanam_hari_ini.iterrows():
-                st.success(f"**{r['bedeng']}** — {get_kebun(r['bedeng'])}")
+                st.markdown(
+                    f"<div style='padding:6px 4px;font-size:15px;'>"
+                    f"<b>{r['bedeng']}</b> — {get_kebun(r['bedeng'])}"
+                    f"</div>",
+                    unsafe_allow_html=True
+                )
         else:
-            st.info("Tidak ada penanaman")
+            st.info("Tidak ada penanaman.")
 
 # ==================== BEDENG HARUS PANEN (TABEL RAPI) ====================
 with st.expander("Bedeng Harus Panen per Kebun (Umur > 22 hari)", expanded=True):
@@ -281,4 +288,4 @@ with st.expander("Tabel Lengkap Semua Data (Riwayat)", expanded=False):
 
 # ==================== FOOTER ====================
 st.markdown("<br><hr><p style='text-align:center;color:#888;font-size:0.9em;'>"
-            "Dashboard Plan Kangkung PRO • Made with ❤️ & Streamlit</p>", unsafe_allow_html=True)
+            "Dashboard Plan Kangkung PRO • PPIC-Eddy</p>", unsafe_allow_html=True)
