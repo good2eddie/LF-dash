@@ -218,7 +218,7 @@ with st.expander("Hasil Panen", expanded=False):
     df_hasil = df_hasil[df_hasil["panen_aktual"].dt.date == tgl_filter]
 
     # --- Batasi 10 baris ---
-    df_hasil = df_hasil.sort_values("panen_aktual").head(10)
+    df_hasil = df_hasil.sort_values("panen_aktual").head(18)
 
     # --- Hitung umur panen ---
     df_hasil["umur_panen"] = (df_hasil["panen_aktual"] - df_hasil["tanggal"]).dt.days
