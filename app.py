@@ -128,7 +128,7 @@ with c2:
             st.info("Tidak ada penanaman.")
 
 # ==================== KALENDER PERAWATAN ====================
-st.markdown("### 📅 Kalender Jadwal Perawatan (Pupuk Daun & Pupuk Cor)")
+with st.expander("📅 Kalender Jadwal Perawatan (Pupuk Daun & Pupuk Cor))", expanded=True):
 
 col_filter, col_view = st.columns([1, 2])
 
