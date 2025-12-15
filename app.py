@@ -129,97 +129,97 @@ with c2:
 
 
 # ==================== KALENDER PERAWATAN ====================
-"""
-with st.expander("📅 Kalender Jadwal Perawatan Mingguan / Bulan (Pupuk Daun & Pupuk Cor)", expanded=False):
 
-    col_filter, col_view = st.columns([1, 2])
+# with st.expander("📅 Kalender Jadwal Perawatan Mingguan / Bulan (Pupuk Daun & Pupuk Cor)", expanded=False):
 
-    with col_filter:
-        filter_option = st.selectbox(
-            "Filter Jenis Perawatan",
-            options=["Semua", "Pupuk Daun (P)", "Pupuk Cor (C)"],
-            index=0,
-            key="filter_kalender_perawatan"
-        )
+#     col_filter, col_view = st.columns([1, 2])
 
-    # Mapping warna sesuai dengan yang sudah ada
-    color_map = {
-        "P1": "#d32f2f",
-        "P2": "#00bfa5",
-        "P3": "#1976d2",
-        "C1": "#388e3c",
-        "C2": "#f57c00",
-    }
+#     with col_filter:
+#         filter_option = st.selectbox(
+#             "Filter Jenis Perawatan",
+#             options=["Semua", "Pupuk Daun (P)", "Pupuk Cor (C)"],
+#             index=0,
+#             key="filter_kalender_perawatan"
+#         )
 
-    # Kumpulkan semua events dari kolom p1,p2,p3,c1,c2
-    events = []
+#     # Mapping warna sesuai dengan yang sudah ada
+#     color_map = {
+#         "P1": "#d32f2f",
+#         "P2": "#00bfa5",
+#         "P3": "#1976d2",
+#         "C1": "#388e3c",
+#         "C2": "#f57c00",
+#     }
 
-    for col in ["p1", "p2", "p3", "c1", "c2"]:
-        if col not in df.columns:
-            continue
+#     # Kumpulkan semua events dari kolom p1,p2,p3,c1,c2
+#     events = []
 
-        treated = df[df[col].notna()][["bedeng", col]].copy()
-        treated["date_str"] = treated[col].dt.strftime("%Y-%m-%d")
+#     for col in ["p1", "p2", "p3", "c1", "c2"]:
+#         if col not in df.columns:
+#             continue
 
-        for _, row in treated.iterrows():
-            label = col.upper()  # P1, C2, dll
-            bedeng_list = row["bedeng"]
+#         treated = df[df[col].notna()][["bedeng", col]].copy()
+#         treated["date_str"] = treated[col].dt.strftime("%Y-%m-%d")
 
-            if isinstance(bedeng_list, str):
-                bedeng_list = [bedeng_list]
-            elif pd.isna(bedeng_list):
-                continue
+#         for _, row in treated.iterrows():
+#             label = col.upper()  # P1, C2, dll
+#             bedeng_list = row["bedeng"]
 
-            title = f"{label}: {', '.join(bedeng_list)}"
+#             if isinstance(bedeng_list, str):
+#                 bedeng_list = [bedeng_list]
+#             elif pd.isna(bedeng_list):
+#                 continue
 
-            events.append({
-                "title": title,
-                "start": row["date_str"],
-                "backgroundColor": color_map.get(label, "#999999"),
-                "borderColor": color_map.get(label, "#999999"),
-                "textColor": "white",
-                "extendedProps": {
-                    "type": "P" if col.startswith("p") else "C",
-                    "kode": label
-                }
-            })
+#             title = f"{label}: {', '.join(bedeng_list)}"
 
-    # Filter event sesuai pilihan user
-    if filter_option == "Pupuk Daun (P)":
-        events = [e for e in events if e["extendedProps"]["type"] == "P"]
-    elif filter_option == "Pupuk Cor (C)":
-        events = [e for e in events if e["extendedProps"]["type"] == "C"]
+#             events.append({
+#                 "title": title,
+#                 "start": row["date_str"],
+#                 "backgroundColor": color_map.get(label, "#999999"),
+#                 "borderColor": color_map.get(label, "#999999"),
+#                 "textColor": "white",
+#                 "extendedProps": {
+#                     "type": "P" if col.startswith("p") else "C",
+#                     "kode": label
+#                 }
+#             })
 
-    # Import calendar component
-    from streamlit_calendar import calendar
+#     # Filter event sesuai pilihan user
+#     if filter_option == "Pupuk Daun (P)":
+#         events = [e for e in events if e["extendedProps"]["type"] == "P"]
+#     elif filter_option == "Pupuk Cor (C)":
+#         events = [e for e in events if e["extendedProps"]["type"] == "C"]
 
-    calendar_options = {
-        "initialView": "dayGridMonth",
-        "headerToolbar": {
-            "left": "prev,next today",
-            "center": "title",
-            "right": "dayGridMonth,dayGridWeek",
-        },
-        "selectable": True,
-        "editable": False,
-        "height": "700px",
-        "locale": "id",
-    }
+#     # Import calendar component
+#     from streamlit_calendar import calendar
 
-    cal_data = calendar(
-        events=events,
-        options=calendar_options,
-        key="perawatan_calendar"
-    )
+#     calendar_options = {
+#         "initialView": "dayGridMonth",
+#         "headerToolbar": {
+#             "left": "prev,next today",
+#             "center": "title",
+#             "right": "dayGridMonth,dayGridWeek",
+#         },
+#         "selectable": True,
+#         "editable": False,
+#         "height": "700px",
+#         "locale": "id",
+#     }
 
-    # Info klik event
-    if cal_data and "eventClick" in cal_data:
-        event_info = cal_data["eventClick"]["event"]
-        st.info(
-            f"Detail: {event_info['title']} "
-            f"pada {event_info['start']}"
-        )
-"""
+#     cal_data = calendar(
+#         events=events,
+#         options=calendar_options,
+#         key="perawatan_calendar"
+#     )
+
+#     # Info klik event
+#     if cal_data and "eventClick" in cal_data:
+#         event_info = cal_data["eventClick"]["event"]
+#         st.info(
+#             f"Detail: {event_info['title']} "
+#             f"pada {event_info['start']}"
+#         )
+
 
 # ==================== BEDENG HARUS PANEN (TABEL RAPI) ====================
 with st.expander("Bedeng Harus Panen per Kebun (Umur > 22 hari)", expanded=True):
