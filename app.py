@@ -129,6 +129,9 @@ with c2:
 
 
 # ==================== KALENDER PERAWATAN ====================
+SHOW_KALENDER_PERAWATAN = False
+
+if SHOW_KALENDER_PERAWATAN:
 with st.expander("📅 Kalender Jadwal Perawatan Mingguan / Bulan (Pupuk Daun & Pupuk Cor)", expanded=False):
 
     col_filter, col_view = st.columns([1, 2])
