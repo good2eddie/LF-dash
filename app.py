@@ -129,9 +129,7 @@ with c2:
 
 
 # ==================== KALENDER PERAWATAN ====================
-SHOW_KALENDER_PERAWATAN = False
-
-if SHOW_KALENDER_PERAWATAN:
+"""
 with st.expander("📅 Kalender Jadwal Perawatan Mingguan / Bulan (Pupuk Daun & Pupuk Cor)", expanded=False):
 
     col_filter, col_view = st.columns([1, 2])
@@ -221,7 +219,7 @@ with st.expander("📅 Kalender Jadwal Perawatan Mingguan / Bulan (Pupuk Daun & 
             f"Detail: {event_info['title']} "
             f"pada {event_info['start']}"
         )
-
+"""
 
 # ==================== BEDENG HARUS PANEN (TABEL RAPI) ====================
 with st.expander("Bedeng Harus Panen per Kebun (Umur > 22 hari)", expanded=True):
