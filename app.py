@@ -223,38 +223,66 @@ with c2:
 
 # ==================== BEDENG HARUS PANEN (TABEL RAPI) ====================
 with st.expander("Bedeng Harus Panen per Kebun (Umur > 22 hari)", expanded=True):
-    df_hp = df[
+
+    # 1️⃣ Ambil hanya tanam yang BELUM panen
+    df_active = df[
         df["panen_aktual"].isna() &
-        df["tanggal"].notna() &
-        (df["umur_hari"] > 22)
+        df["tanggal"].notna()
     ].copy()
 
-    df_hp["prefix"] = df_hp["bedeng"].astype(str).str[:2].str.upper()
+    # 2️⃣ Urutkan per bedeng dari tanam TERBARU
+    df_active = df_active.sort_values(
+        ["bedeng", "tanggal"],
+        ascending=[True, False]
+    )
+
+    # 3️⃣ Ambil 1 baris TERBARU per bedeng
+    df_active = df_active.drop_duplicates(
+        subset="bedeng",
+        keep="first"
+    )
+
+    # 4️⃣ Filter umur panen
+    df_hp = df_active[df_active["umur_hari"] > 22].copy()
+
+    # ================= TAMPILAN =================
+    df_hp["prefix"] = df_hp["bedeng"].str[:2].str.upper()
     kebun_order = ["TA", "TB", "SA", "SB", "BS"]
 
-    # Buat list per kebun
     kebun_data = {}
     for kode in kebun_order:
-        sub = df_hp[df_hp["prefix"] == kode][["bedeng", "umur_hari"]].sort_values("umur_hari", ascending=False)
-        kebun_data[kode] = [f"{row['bedeng']} – {int(row['umur_hari'])}" for _, row in sub.iterrows()]
+        sub = df_hp[df_hp["prefix"] == kode][
+            ["bedeng", "umur_hari"]
+        ].sort_values("umur_hari", ascending=False)
 
-    # Padding supaya semua kolom sama tinggi
-    max_rows = max(len(v) for v in kebun_data.values())
+        kebun_data[kode] = [
+            f"{r.bedeng} – {int(r.umur_hari)}"
+            for r in sub.itertuples()
+        ]
+
+    # Padding kolom
+    max_rows = max((len(v) for v in kebun_data.values()), default=0)
     for k in kebun_data:
         kebun_data[k] += [""] * (max_rows - len(kebun_data[k]))
 
-    # Buat DataFrame untuk tabel rapi
     table_df = pd.DataFrame(kebun_data)
-    
+
     def highlight_hp(val):
-        if not val: return ""
-        umur = int(val.split("–")[-1].strip())
-        if umur > 25: return "background-color:#ff5252;color:white;font-weight:bold"
-        if 23 <= umur <= 25: return "background-color:#c8e6c9;color:#1b5e20;font-weight:bold"
+        if not val:
+            return ""
+        umur = int(val.split("–")[-1])
+        if umur > 25:
+            return "background-color:#ff5252;color:white;font-weight:bold"
+        if 23 <= umur <= 25:
+            return "background-color:#c8e6c9;color:#1b5e20;font-weight:bold"
         return ""
 
-    styled_table = table_df.style.applymap(highlight_hp)
-    st.dataframe(styled_table, use_container_width=True, hide_index=True)
+    st.dataframe(
+        table_df.style.applymap(highlight_hp),
+        use_container_width=True,
+        hide_index=True
+    )
+
 
 # ==================== BEDENG AKTIF ====================
 with st.expander("Bedeng Aktif Saat Ini", expanded=False):
