@@ -273,7 +273,7 @@ with st.expander("Bedeng Harus Panen per Kebun (Umur > 22 hari)", expanded=True)
         umur = int(val.split("–")[-1])
         if umur > 25:
             return "background-color:#ff5252;color:white;font-weight:bold"
-        if 23 <= umur <= 25:
+        if 21 <= umur <= 25:
             return "background-color:#c8e6c9;color:#1b5e20;font-weight:bold"
         return ""
 
