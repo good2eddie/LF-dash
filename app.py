@@ -326,23 +326,19 @@ with st.expander("Hasil Panen", expanded=False):
             value=default_tgl
         )
 
-    # --- Prepare df_hasil ---
+    # ==================== PREPARE DATA ====================
+
     df_hasil = df.copy()
 
-    # --- Konversi datetime ---
     df_hasil["panen_aktual"] = pd.to_datetime(df_hasil["panen_aktual"], errors="coerce")
     df_hasil["tanggal"] = pd.to_datetime(df_hasil["tanggal"], errors="coerce")
 
-    # --- Ambil hanya yang punya panen aktual ---
     df_hasil = df_hasil[df_hasil["panen_aktual"].notna()].copy()
 
-    # --- Filter berdasarkan tanggal panen ---
     df_hasil = df_hasil[df_hasil["panen_aktual"].dt.date == tgl_filter]
 
-    # --- Batasi 18 baris ---
     df_hasil = df_hasil.sort_values("panen_aktual").head(18)
 
-    # --- Hitung umur panen ---
     df_hasil["umur_panen"] = (df_hasil["panen_aktual"] - df_hasil["tanggal"]).dt.days
 
     # ==================== STANDARD & VARIANCE ====================
@@ -355,32 +351,48 @@ with st.expander("Hasil Panen", expanded=False):
 
     if df_hasil.empty:
         st.info("Tidak ada data panen untuk tanggal tersebut.")
+
     else:
 
-        # --- Siapkan tampilan utama ---
+        # ==================== DATA VIEW ====================
+
         df_view = df_hasil[[
             "panen_aktual", "kebun", "bedeng", "umur_panen",
             "gross", "net", "waste",
             "standard", "variance_kg", "variance_pct"
         ]].copy()
 
-        # --- Format tanggal ---
         df_view["panen_aktual"] = df_view["panen_aktual"].dt.strftime("%d/%m/%Y")
 
-        # --- Format persen ---
-        df_view["variance_pct"] = df_view["variance_pct"].map(lambda x: f"{x:.1f}%")
+        # ==================== FORMAT ANGKA ====================
+
+        num_cols = ["gross", "net", "waste", "standard", "variance_kg"]
+
+        for col in num_cols:
+            df_view[col] = df_view[col].map(
+                lambda x: f"{x:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+            )
+
+        df_view["variance_pct"] = df_view["variance_pct"].map(
+            lambda x: f"{x:.1f}%".replace(".", ",")
+        )
 
         # ==================== STYLE ====================
 
-        def highlight_negative(val):
+        def highlight_variance(val):
             try:
-                if float(val) < 0:
+                val = float(str(val).replace(",", "."))
+                if val < 0:
                     return "color: red"
             except:
                 pass
             return ""
 
-        styled_df = df_view.style.map(highlight_negative, subset=["variance_kg"])
+        styled_df = (
+            df_view.style
+            .map(highlight_variance, subset=["variance_kg", "variance_pct"])
+            .set_properties(subset=num_cols + ["variance_pct"], **{"text-align": "right"})
+        )
 
         st.dataframe(
             styled_df,
@@ -390,17 +402,37 @@ with st.expander("Hasil Panen", expanded=False):
 
         # ==================== TOTAL ====================
 
-        st.markdown("### Total")
+        st.markdown("### Total & Average")
 
         total_gross = df_hasil["gross"].sum()
         total_net = df_hasil["net"].sum()
         total_waste = df_hasil["waste"].sum()
 
+        avg_gross = df_hasil["gross"].mean()
+        avg_net = df_hasil["net"].mean()
+        avg_var_kg = df_hasil["variance_kg"].mean()
+        avg_var_pct = df_hasil["variance_pct"].mean()
+
+        def fmt(x):
+            return f"{x:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+
+        def fmt_pct(x):
+            return f"{x:.1f}%".replace(".", ",")
+
         col1, col2, col3 = st.columns(3)
 
-        col1.metric("Total Gross", f"{total_gross:,.2f}")
-        col2.metric("Total Net", f"{total_net:,.2f}")
-        col3.metric("Total Waste", f"{total_waste:,.2f}")
+        col1.metric("Total Gross", fmt(total_gross))
+        col2.metric("Total Net", fmt(total_net))
+        col3.metric("Total Waste", fmt(total_waste))
+
+        st.markdown("### Average per Bedeng")
+
+        col4, col5, col6, col7 = st.columns(4)
+
+        col4.metric("Avg Gross", fmt(avg_gross))
+        col5.metric("Avg Net", fmt(avg_net))
+        col6.metric("Avg Variance (kg)", fmt(avg_var_kg))
+        col7.metric("Avg Variance (%)", fmt_pct(avg_var_pct))
 
 # ==================== TABEL LENGKAP ====================
 with st.expander("Tabel Lengkap Semua Data (Riwayat)", expanded=False):
