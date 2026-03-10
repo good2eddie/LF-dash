@@ -339,26 +339,57 @@ with st.expander("Hasil Panen", expanded=False):
     # --- Filter berdasarkan tanggal panen ---
     df_hasil = df_hasil[df_hasil["panen_aktual"].dt.date == tgl_filter]
 
-    # --- Batasi 10 baris ---
+    # --- Batasi 18 baris ---
     df_hasil = df_hasil.sort_values("panen_aktual").head(18)
 
     # --- Hitung umur panen ---
     df_hasil["umur_panen"] = (df_hasil["panen_aktual"] - df_hasil["tanggal"]).dt.days
 
+    # ==================== STANDARD & VARIANCE ====================
+
+    STANDARD_BEDENG = 14.55
+
+    df_hasil["standard"] = STANDARD_BEDENG
+    df_hasil["variance_kg"] = df_hasil["net"] - df_hasil["standard"]
+    df_hasil["variance_pct"] = (df_hasil["variance_kg"] / df_hasil["standard"]) * 100
+
     if df_hasil.empty:
         st.info("Tidak ada data panen untuk tanggal tersebut.")
     else:
+
         # --- Siapkan tampilan utama ---
         df_view = df_hasil[[
             "panen_aktual", "kebun", "bedeng", "umur_panen",
-            "gross", "net", "waste"
+            "gross", "net", "waste",
+            "standard", "variance_kg", "variance_pct"
         ]].copy()
 
+        # --- Format tanggal ---
         df_view["panen_aktual"] = df_view["panen_aktual"].dt.strftime("%d/%m/%Y")
 
-        st.dataframe(df_view, use_container_width=True, hide_index=True)
+        # --- Format persen ---
+        df_view["variance_pct"] = df_view["variance_pct"].map(lambda x: f"{x:.1f}%")
+
+        # ==================== STYLE ====================
+
+        def highlight_negative(val):
+            try:
+                if float(val) < 0:
+                    return "color: red"
+            except:
+                pass
+            return ""
+
+        styled_df = df_view.style.map(highlight_negative, subset=["variance_kg"])
+
+        st.dataframe(
+            styled_df,
+            use_container_width=True,
+            hide_index=True
+        )
 
         # ==================== TOTAL ====================
+
         st.markdown("### Total")
 
         total_gross = df_hasil["gross"].sum()
