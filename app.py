@@ -10,7 +10,7 @@ from datetime import date, datetime, timedelta
 from zoneinfo import ZoneInfo
 
 # ==================== CONFIG ====================
-st.set_page_config(page_title="Plan Kangkung PRO", page_icon="Leaf", layout="wide")
+st.set_page_config(page_title="Plan Kangkung PRO 2", page_icon="Leaf", layout="wide")
 
 # CSS custom untuk tabel rapi + teks kecil
 st.markdown("""
@@ -475,13 +475,13 @@ with st.expander("Tabel Lengkap Semua Data (Riwayat)", expanded=False):
                + (f" (difilter: {start_tanam.strftime('%d/%m/%Y')} – {end_tanam.strftime('%d/%m/%Y')})" 
                   if (start_tanam != today or end_tanam != today) else ""))
 
-# ==================== AI DATA ANALYST (GROQ) ====================
-# ====================
-# LOAD DATA EXCEL
-# ====================
+
+import streamlit as st
+import pandas as pd
+from groq import Groq
 
 # =========================
-# LOAD DATA (HANYA SHEET DASH)
+# LOAD DATA
 # =========================
 
 @st.cache_data
@@ -511,27 +511,66 @@ def load_data():
         "jenis_panen"
     ]
 
+    df["tanggal_panen"] = pd.to_datetime(df["tanggal_panen"], errors="coerce")
+
     return df
 
 
 df = load_data()
 
 # =========================
-# INFO DATA UNTUK AI
+# RINGKASAN DATA UNTUK AI
 # =========================
 
-data_info = df.head(200).to_string()
+summary_harian = (
+    df.groupby("tanggal_panen")
+    .agg(
+        total_net=("panen_net", "sum"),
+        total_gross=("panen_gross", "sum"),
+        total_waste=("panen_waste", "sum"),
+        jumlah_bedeng=("nomor_bedeng", "count")
+    )
+    .tail(30)
+)
+
+data_info = f"""
+DATA DASHBOARD LUCKYFARM
+
+Jumlah baris data: {len(df)}
+
+Kolom:
+{list(df.columns)}
+
+STATISTIK PANEN
+Total Gross: {df['panen_gross'].sum():,.2f}
+Total Net: {df['panen_net'].sum():,.2f}
+Total Waste: {df['panen_waste'].sum():,.2f}
+
+Rata-rata Net per Bedeng:
+{df['panen_net'].mean():.2f}
+
+Periode panen:
+{df['tanggal_panen'].min()} sampai {df['tanggal_panen'].max()}
+
+Ringkasan panen 30 hari terakhir:
+{summary_harian.to_string()}
+"""
 
 # =========================
 # GROQ CLIENT
 # =========================
+
 client = Groq(
-    api_key="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"
+    api_key=st.secrets["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"]
 )
+
+# =========================
+# AI DATA ANALYST
+# =========================
 
 with st.expander("AI Data Analyst (Tanya Data)", expanded=False):
 
-    st.caption("Tanyakan apa saja tentang data dashboard")
+    st.caption("Tanyakan apa saja tentang data panen LuckyFarm")
 
     if "ai_messages" not in st.session_state:
         st.session_state.ai_messages = []
@@ -542,11 +581,10 @@ with st.expander("AI Data Analyst (Tanya Data)", expanded=False):
             st.markdown(msg["content"])
 
     # input pertanyaan
-    question = st.chat_input("Tanya tentang data...")
+    question = st.chat_input("Contoh: berapa total panen net minggu ini?")
 
     if question:
 
-        # tampilkan pertanyaan user
         with st.chat_message("user"):
             st.markdown(question)
 
@@ -559,15 +597,16 @@ with st.expander("AI Data Analyst (Tanya Data)", expanded=False):
             prompt = f"""
 Anda adalah AI Data Analyst untuk dashboard pertanian LuckyFarm.
 
-Gunakan data berikut:
+Gunakan informasi data berikut untuk menjawab pertanyaan.
 
 {data_info}
 
 Aturan:
 - Jawab singkat
 - Bahasa Indonesia
-- Jangan tampilkan kode Python
 - Fokus pada analisa data
+- Jangan tampilkan kode Python
+- Jika data tidak tersedia jawab dengan jujur
 
 Pertanyaan:
 {question}
@@ -578,6 +617,7 @@ Pertanyaan:
                     {"role": "user", "content": prompt}
                 ],
                 model="llama-3.1-8b-instant",
+                temperature=0.2
             )
 
             result_text = chat.choices[0].message.content
