@@ -3,6 +3,7 @@ import streamlit as st
 import pandas as pd
 import requests
 import json
+import os
 from pathlib import Path
 from datetime import date, datetime, timedelta
 from zoneinfo import ZoneInfo
@@ -477,7 +478,6 @@ with st.expander("Tabel Lengkap Semua Data (Riwayat)", expanded=False):
 
 from groq import Groq
 
-import os
 client = Groq(api_key=os.environ["GROQ_API_KEY"])
 
 with st.expander("AI Data Analyst (Tanya Data)", expanded=False):
