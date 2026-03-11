@@ -478,7 +478,9 @@ with st.expander("Tabel Lengkap Semua Data (Riwayat)", expanded=False):
 
 from groq import Groq
 
-client = Groq(api_key=os.environ["GROQ_API_KEY"])
+client = Groq(
+    api_key="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"
+)
 
 with st.expander("AI Data Analyst (Tanya Data)", expanded=False):
 
