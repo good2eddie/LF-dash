@@ -473,102 +473,79 @@ with st.expander("Tabel Lengkap Semua Data (Riwayat)", expanded=False):
                + (f" (difilter: {start_tanam.strftime('%d/%m/%Y')} – {end_tanam.strftime('%d/%m/%Y')})" 
                   if (start_tanam != today or end_tanam != today) else ""))
 
-# ==================== AI DATA ANALYST ====================
+# ==================== AI DATA ANALYST (GROQ) ====================
+
+from groq import Groq
+
+import os
+client = Groq(api_key=os.environ["GROQ_API_KEY"])
 
 with st.expander("AI Data Analyst (Tanya Data)", expanded=False):
 
-    import requests
-
     st.caption("Tanyakan apa saja tentang data dashboard")
 
-    # Chat history
     if "ai_messages" not in st.session_state:
         st.session_state.ai_messages = []
 
-    # tampilkan chat sebelumnya
     for msg in st.session_state.ai_messages:
         with st.chat_message(msg["role"]):
             st.markdown(msg["content"])
 
-    # input pertanyaan
     question = st.chat_input("Contoh: berapa total panen kemarin?")
 
     if question:
 
-        # tampilkan pertanyaan user
-        st.session_state.ai_messages.append({"role": "user", "content": question})
+        st.session_state.ai_messages.append(
+            {"role": "user", "content": question}
+        )
 
         with st.chat_message("user"):
             st.markdown(question)
 
         # ====================
-        # RINGKASAN DATA UNTUK AI
+        # DATA SUMMARY
         # ====================
 
-        try:
-
-            data_info = f"""
-Total baris data: {len(df)}
+        data_info = f"""
+Jumlah data: {len(df)}
 
 Kolom tersedia:
 {", ".join(df.columns)}
 
 Contoh data:
-{df.head(10).to_string(index=False)}
+{df.head(5).to_string(index=False)}
 """
 
-        except Exception as e:
-            data_info = f"Error membaca dataframe: {e}"
-
-        # ====================
-        # PROMPT UNTUK AI
-        # ====================
-
         prompt = f"""
-Anda adalah AI Data Analyst untuk dashboard pertanian LuckyFarm.
+Anda adalah AI Data Analyst untuk dashboard LuckyFarm.
 
-Gunakan hanya data berikut untuk menjawab pertanyaan.
+Gunakan data berikut untuk menjawab pertanyaan.
 
 {data_info}
-
-Instruksi:
-- Jawab dengan singkat
-- Jika data tidak tersedia, katakan "Data tidak tersedia"
 
 Pertanyaan user:
 {question}
 """
 
-        # ====================
-        # REQUEST KE OLLAMA
-        # ====================
-
         try:
 
-            with st.spinner("AI sedang menganalisis data..."):
+            with st.spinner("AI sedang menganalisis..."):
 
-                response = requests.post(
-                    "http://localhost:11434/api/generate",
-                    json={
-                        "model": "phi3",
-                        "prompt": prompt,
-                        "stream": False,
-                        "options": {
-                            "num_predict": 200,
-                            "temperature": 0.2
+                chat = client.chat.completions.create(
+                    messages=[
+                        {
+                            "role": "user",
+                            "content": prompt
                         }
-                    },
-                    timeout=300
+                    ],
+                    model="llama-3.1-8b-instant",
                 )
 
-                result = response.json()
-
-                answer = result.get("response", "AI tidak memberikan jawaban.")
+                answer = chat.choices[0].message.content
 
         except Exception as e:
             answer = f"AI error: {e}"
 
-        # tampilkan jawaban AI
         with st.chat_message("assistant"):
             st.markdown(answer)
 
