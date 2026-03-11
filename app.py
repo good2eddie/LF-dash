@@ -10,7 +10,7 @@ from datetime import date, datetime, timedelta
 from zoneinfo import ZoneInfo
 
 # ==================== CONFIG ====================
-st.set_page_config(page_title="Plan Kangkung PRO", page_icon="Leaf", layout="wide")
+st.set_page_config(page_title="Plan Kangkung PRO 2", page_icon="Leaf", layout="wide")
 
 # CSS custom untuk tabel rapi + teks kecil
 st.markdown("""
@@ -476,6 +476,39 @@ with st.expander("Tabel Lengkap Semua Data (Riwayat)", expanded=False):
                   if (start_tanam != today or end_tanam != today) else ""))
 
 # ==================== AI DATA ANALYST (GROQ) ====================
+# ====================
+# LOAD DATA EXCEL
+# ====================
+
+@st.cache_data
+def load_data():
+
+    df = pd.read_excel(
+        "Plan_Kangkung_Daily.xlsx",
+        sheet_name="dash"
+    )
+
+    df.columns = [
+        "tanggal_tanam",
+        "kode_bedeng",
+        "nomor_bedeng",
+        "rencana_panen",
+        "pupuk_daun_1",
+        "pupuk_daun_2",
+        "pupuk_daun_3",
+        "pupuk_cor_1",
+        "pupuk_cor_2",
+        "tanggal_panen",
+        "umur_panen",
+        "panen_gross",
+        "panen_net",
+        "panen_waste",
+        "jenis_panen"
+    ]
+
+    return df
+
+df = load_data()
 
 from groq import Groq
 
@@ -490,11 +523,12 @@ with st.expander("AI Data Analyst (Tanya Data)", expanded=False):
     if "ai_messages" not in st.session_state:
         st.session_state.ai_messages = []
 
+    # tampilkan chat history
     for msg in st.session_state.ai_messages:
         with st.chat_message(msg["role"]):
             st.markdown(msg["content"])
 
-    question = st.chat_input("Contoh: berapa total panen kemarin?")
+    question = st.chat_input("Contoh: total panen, grafik panen, bedeng umur 21 hari")
 
     if question:
 
@@ -505,10 +539,6 @@ with st.expander("AI Data Analyst (Tanya Data)", expanded=False):
         with st.chat_message("user"):
             st.markdown(question)
 
-        # ====================
-        # ANALISIS PYTHON OTOMATIS
-        # ====================
-
         result_text = ""
         result_table = None
         result_chart = None
@@ -517,68 +547,108 @@ with st.expander("AI Data Analyst (Tanya Data)", expanded=False):
 
         try:
 
-            # contoh: bedeng umur tertentu
+            # ====================
+            # BEDENG UMUR TERTENTU
+            # ====================
+
             if "umur" in q:
 
-                import re
                 angka = re.findall(r'\d+', q)
 
                 if angka:
+
                     umur = int(angka[0])
 
-                    result = df[df["umur_hari"] == umur]
+                    result = df[df["umur_panen"] == umur]
 
-                    result_text = f"Terdapat {len(result)} bedeng dengan umur {umur} hari."
+                    result_text = f"Terdapat {len(result)} bedeng dipanen pada umur {umur} hari."
 
                     result_table = result
 
 
-            # contoh total panen
+            # ====================
+            # TOTAL PANEN
+            # ====================
+
             elif "total panen" in q:
 
-                total = df["panen_kg"].sum()
+                total = df["panen_net"].sum()
 
-                result_text = f"Total panen pada data saat ini adalah {total} kg."
+                result_text = f"Total panen bersih adalah {total:.2f} kg."
 
 
-            # contoh grafik panen
+            # ====================
+            # PANEN TERBESAR
+            # ====================
+
+            elif "panen terbesar" in q:
+
+                result = df.sort_values("panen_net", ascending=False).head(10)
+
+                result_text = "Berikut bedeng dengan panen terbesar."
+
+                result_table = result
+
+
+            # ====================
+            # GRAFIK PANEN
+            # ====================
+
             elif "grafik" in q or "trend" in q:
 
-                g = df.groupby("tanggal")["panen_kg"].sum()
+                g = df.groupby("tanggal_panen")["panen_net"].sum()
 
                 fig, ax = plt.subplots()
 
                 g.plot(ax=ax)
 
-                ax.set_title("Trend Panen")
+                ax.set_title("Trend Panen Kangkung")
+                ax.set_xlabel("Tanggal Panen")
+                ax.set_ylabel("Panen (kg)")
 
                 result_chart = fig
 
                 result_text = "Berikut grafik trend panen."
 
 
-            else:
+            # ====================
+            # PANEN HARI INI
+            # ====================
 
-                # ====================
-                # FALLBACK KE GROQ AI
-                # ====================
+            elif "hari ini" in q:
+
+                today = pd.Timestamp.today().date()
+
+                result = df[df["tanggal_panen"] == pd.Timestamp(today)]
+
+                result_text = f"Terdapat {len(result)} bedeng dipanen hari ini."
+
+                result_table = result
+
+
+            # ====================
+            # FALLBACK KE AI
+            # ====================
+
+            else:
 
                 data_info = f"""
 Jumlah data: {len(df)}
-Kolom: {",".join(df.columns)}
+Kolom data: {",".join(df.columns)}
+Total panen net: {df['panen_net'].sum():.2f} kg
 """
 
                 prompt = f"""
-Anda adalah AI Data Analyst untuk dashboard LuckyFarm.
+Anda adalah AI Data Analyst untuk dashboard pertanian LuckyFarm.
 
-Gunakan data berikut:
+Gunakan informasi data berikut:
 
 {data_info}
 
-ATURAN:
-- Jangan tampilkan kode Python
-- Jawab dengan bahasa Indonesia
+Aturan:
 - Jawab singkat
+- Bahasa Indonesia
+- Jangan tampilkan kode Python
 
 Pertanyaan:
 {question}
