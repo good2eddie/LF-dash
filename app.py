@@ -3,7 +3,8 @@ import streamlit as st
 import pandas as pd
 import requests
 import json
-import os
+from groq import Groq
+import matplotlib.pyplot as plt
 from pathlib import Path
 from datetime import date, datetime, timedelta
 from zoneinfo import ZoneInfo
@@ -505,54 +506,112 @@ with st.expander("AI Data Analyst (Tanya Data)", expanded=False):
             st.markdown(question)
 
         # ====================
-        # DATA SUMMARY
+        # ANALISIS PYTHON OTOMATIS
         # ====================
 
-        data_info = f"""
-Jumlah data: {len(df)}
+        result_text = ""
+        result_table = None
+        result_chart = None
 
-Kolom tersedia:
-{", ".join(df.columns)}
-
-Contoh data:
-{df.head(5).to_string(index=False)}
-"""
-
-        prompt = f"""
-Anda adalah AI Data Analyst untuk dashboard LuckyFarm.
-
-Gunakan data berikut untuk menjawab pertanyaan.
-
-{data_info}
-
-Pertanyaan user:
-{question}
-"""
+        q = question.lower()
 
         try:
 
-            with st.spinner("AI sedang menganalisis..."):
+            # contoh: bedeng umur tertentu
+            if "umur" in q:
+
+                import re
+                angka = re.findall(r'\d+', q)
+
+                if angka:
+                    umur = int(angka[0])
+
+                    result = df[df["umur_hari"] == umur]
+
+                    result_text = f"Terdapat {len(result)} bedeng dengan umur {umur} hari."
+
+                    result_table = result
+
+
+            # contoh total panen
+            elif "total panen" in q:
+
+                total = df["panen_kg"].sum()
+
+                result_text = f"Total panen pada data saat ini adalah {total} kg."
+
+
+            # contoh grafik panen
+            elif "grafik" in q or "trend" in q:
+
+                g = df.groupby("tanggal")["panen_kg"].sum()
+
+                fig, ax = plt.subplots()
+
+                g.plot(ax=ax)
+
+                ax.set_title("Trend Panen")
+
+                result_chart = fig
+
+                result_text = "Berikut grafik trend panen."
+
+
+            else:
+
+                # ====================
+                # FALLBACK KE GROQ AI
+                # ====================
+
+                data_info = f"""
+Jumlah data: {len(df)}
+Kolom: {",".join(df.columns)}
+"""
+
+                prompt = f"""
+Anda adalah AI Data Analyst untuk dashboard LuckyFarm.
+
+Gunakan data berikut:
+
+{data_info}
+
+ATURAN:
+- Jangan tampilkan kode Python
+- Jawab dengan bahasa Indonesia
+- Jawab singkat
+
+Pertanyaan:
+{question}
+"""
 
                 chat = client.chat.completions.create(
-                    messages=[
-                        {
-                            "role": "user",
-                            "content": prompt
-                        }
-                    ],
+                    messages=[{"role": "user", "content": prompt}],
                     model="llama-3.1-8b-instant",
                 )
 
-                answer = chat.choices[0].message.content
+                result_text = chat.choices[0].message.content
+
 
         except Exception as e:
-            answer = f"AI error: {e}"
+
+            result_text = f"Terjadi error: {e}"
+
+        # ====================
+        # TAMPILKAN HASIL
+        # ====================
 
         with st.chat_message("assistant"):
-            st.markdown(answer)
+
+            st.markdown(result_text)
+
+            if result_table is not None:
+                st.dataframe(result_table)
+
+            if result_chart is not None:
+                st.pyplot(result_chart)
 
         st.session_state.ai_messages.append(
-            {"role": "assistant", "content": answer}
+            {"role": "assistant", "content": result_text}
         )
 # ==================== FOOTER ====================
 st.markdown("<br><hr><p style='text-align:center;color:#888;font-size:0.9em;'>"
