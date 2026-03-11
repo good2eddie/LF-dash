@@ -10,7 +10,7 @@ from datetime import date, datetime, timedelta
 from zoneinfo import ZoneInfo
 
 # ==================== CONFIG ====================
-st.set_page_config(page_title="Plan Kangkung PRO 2", page_icon="Leaf", layout="wide")
+st.set_page_config(page_title="Plan Kangkung PRO", page_icon="Leaf", layout="wide")
 
 # CSS custom untuk tabel rapi + teks kecil
 st.markdown("""
