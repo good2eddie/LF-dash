@@ -1,6 +1,8 @@
 # app.py — Dashboard Plan Kangkung PRO (Versi Rapi & Simple)
 import streamlit as st
 import pandas as pd
+import requests
+import json
 from pathlib import Path
 from datetime import date, datetime, timedelta
 from zoneinfo import ZoneInfo
@@ -470,6 +472,79 @@ with st.expander("Tabel Lengkap Semua Data (Riwayat)", expanded=False):
     st.caption(f"Menampilkan **{len(df_disp)}** baris data"
                + (f" (difilter: {start_tanam.strftime('%d/%m/%Y')} – {end_tanam.strftime('%d/%m/%Y')})" 
                   if (start_tanam != today or end_tanam != today) else ""))
+
+# ==================== AI DATA ANALYST ====================
+
+with st.expander("AI Data Analyst (Tanya Data)", expanded=False):
+
+    import requests
+
+    st.caption("Tanyakan apa saja tentang data dashboard")
+
+    # chat history
+    if "ai_messages" not in st.session_state:
+        st.session_state.ai_messages = []
+
+    # tampilkan chat lama
+    for msg in st.session_state.ai_messages:
+        with st.chat_message(msg["role"]):
+            st.markdown(msg["content"])
+
+    # input user
+    question = st.chat_input("Contoh: berapa total panen kemarin?")
+
+    if question:
+
+        st.session_state.ai_messages.append(
+            {"role": "user", "content": question}
+        )
+
+        with st.chat_message("user"):
+            st.markdown(question)
+
+        # ringkasan data untuk AI
+        summary = f"""
+Jumlah data: {len(df)}
+Kolom: {list(df.columns)}
+
+Contoh data:
+{df.head(15).to_string()}
+"""
+
+        prompt = f"""
+Anda adalah AI data analyst untuk dashboard kangkung.
+
+Gunakan data berikut untuk menjawab pertanyaan user.
+
+{summary}
+
+Pertanyaan:
+{question}
+"""
+
+        try:
+
+            response = requests.post(
+                "http://localhost:11434/api/generate",
+                json={
+                    "model": "llama3",
+                    "prompt": prompt,
+                    "stream": False
+                },
+                timeout=60
+            )
+
+            answer = response.json()["response"]
+
+        except Exception as e:
+            answer = f"AI error: {e}"
+
+        with st.chat_message("assistant"):
+            st.markdown(answer)
+
+        st.session_state.ai_messages.append(
+            {"role": "assistant", "content": answer}
+        )
 
 # ==================== FOOTER ====================
 st.markdown("<br><hr><p style='text-align:center;color:#888;font-size:0.9em;'>"
