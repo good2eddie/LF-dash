@@ -10,7 +10,7 @@ from datetime import date, datetime, timedelta
 from zoneinfo import ZoneInfo
 
 # ==================== CONFIG ====================
-st.set_page_config(page_title="Plan Kangkung PRO 2", page_icon="Leaf", layout="wide")
+st.set_page_config(page_title="Plan Kangkung PRO", page_icon="Leaf", layout="wide")
 
 # CSS custom untuk tabel rapi + teks kecil
 st.markdown("""
@@ -561,7 +561,7 @@ Ringkasan panen 30 hari terakhir:
 # =========================
 
 client = Groq(
-    api_key=st.secrets["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"]
+    api_key="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"
 )
 
 # =========================
