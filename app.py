@@ -10,7 +10,7 @@ from datetime import date, datetime, timedelta
 from zoneinfo import ZoneInfo
 
 # ==================== CONFIG ====================
-st.set_page_config(page_title="Plan Kangkung PRO 3", page_icon="Leaf", layout="wide")
+st.set_page_config(page_title="Plan Kangkung PRO", page_icon="Leaf", layout="wide")
 
 # CSS custom untuk tabel rapi + teks kecil
 st.markdown("""
@@ -525,6 +525,9 @@ data_info = df.head(200).to_string()
 # =========================
 # GROQ CLIENT
 # =========================
+client = Groq(
+    api_key="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"
+)
 
 with st.expander("AI Data Analyst (Tanya Data)", expanded=False):
 
