@@ -10,7 +10,7 @@ from datetime import date, datetime, timedelta
 from zoneinfo import ZoneInfo
 
 # ==================== CONFIG ====================
-st.set_page_config(page_title="Plan Kangkung PRO", page_icon="Leaf", layout="wide")
+st.set_page_config(page_title="Plan Kangkung PRO 3", page_icon="Leaf", layout="wide")
 
 # CSS custom untuk tabel rapi + teks kecil
 st.markdown("""
@@ -480,12 +480,17 @@ with st.expander("Tabel Lengkap Semua Data (Riwayat)", expanded=False):
 # LOAD DATA EXCEL
 # ====================
 
-#@st.cache_data
+# =========================
+# LOAD DATA (HANYA SHEET DASH)
+# =========================
+
+@st.cache_data
 def load_data():
 
     df = pd.read_excel(
         "Plan_Kangkung_Daily.xlsx",
-        sheet_name="dash"
+        sheet_name="dash",
+        engine="openpyxl"
     )
 
     df.columns = [
@@ -508,13 +513,18 @@ def load_data():
 
     return df
 
+
 df = load_data()
 
-from groq import Groq
+# =========================
+# INFO DATA UNTUK AI
+# =========================
 
-client = Groq(
-    api_key="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"
-)
+data_info = df.head(200).to_string()
+
+# =========================
+# GROQ CLIENT
+# =========================
 
 with st.expander("AI Data Analyst (Tanya Data)", expanded=False):
 
@@ -523,125 +533,30 @@ with st.expander("AI Data Analyst (Tanya Data)", expanded=False):
     if "ai_messages" not in st.session_state:
         st.session_state.ai_messages = []
 
-    # tampilkan chat history
+    # tampilkan history chat
     for msg in st.session_state.ai_messages:
         with st.chat_message(msg["role"]):
             st.markdown(msg["content"])
 
-    question = st.chat_input("Contoh: total panen, grafik panen, bedeng umur 21 hari")
+    # input pertanyaan
+    question = st.chat_input("Tanya tentang data...")
 
     if question:
+
+        # tampilkan pertanyaan user
+        with st.chat_message("user"):
+            st.markdown(question)
 
         st.session_state.ai_messages.append(
             {"role": "user", "content": question}
         )
 
-        with st.chat_message("user"):
-            st.markdown(question)
-
-        result_text = ""
-        result_table = None
-        result_chart = None
-
-        q = question.lower()
-
         try:
 
-            # ====================
-            # BEDENG UMUR TERTENTU
-            # ====================
-
-            if "umur" in q:
-
-                angka = re.findall(r'\d+', q)
-
-                if angka:
-
-                    umur = int(angka[0])
-
-                    result = df[df["umur_panen"] == umur]
-
-                    result_text = f"Terdapat {len(result)} bedeng dipanen pada umur {umur} hari."
-
-                    result_table = result
-
-
-            # ====================
-            # TOTAL PANEN
-            # ====================
-
-            elif "total panen" in q:
-
-                total = df["panen_net"].sum()
-
-                result_text = f"Total panen bersih adalah {total:.2f} kg."
-
-
-            # ====================
-            # PANEN TERBESAR
-            # ====================
-
-            elif "panen terbesar" in q:
-
-                result = df.sort_values("panen_net", ascending=False).head(10)
-
-                result_text = "Berikut bedeng dengan panen terbesar."
-
-                result_table = result
-
-
-            # ====================
-            # GRAFIK PANEN
-            # ====================
-
-            elif "grafik" in q or "trend" in q:
-
-                g = df.groupby("tanggal_panen")["panen_net"].sum()
-
-                fig, ax = plt.subplots()
-
-                g.plot(ax=ax)
-
-                ax.set_title("Trend Panen Kangkung")
-                ax.set_xlabel("Tanggal Panen")
-                ax.set_ylabel("Panen (kg)")
-
-                result_chart = fig
-
-                result_text = "Berikut grafik trend panen."
-
-
-            # ====================
-            # PANEN HARI INI
-            # ====================
-
-            elif "hari ini" in q:
-
-                today = pd.Timestamp.today().date()
-
-                result = df[df["tanggal_panen"] == pd.Timestamp(today)]
-
-                result_text = f"Terdapat {len(result)} bedeng dipanen hari ini."
-
-                result_table = result
-
-
-            # ====================
-            # FALLBACK KE AI
-            # ====================
-
-            else:
-
-                data_info = f"""
-Jumlah data: {len(df)}
-Kolom data: {",".join(df.columns)}
-Total panen net: {df['panen_net'].sum():.2f} kg
-"""
-
-                prompt = f"""
+            prompt = f"""
 Anda adalah AI Data Analyst untuk dashboard pertanian LuckyFarm.
 
-Gunakan informasi data berikut:
+Gunakan data berikut:
 
 {data_info}
 
@@ -649,18 +564,20 @@ Aturan:
 - Jawab singkat
 - Bahasa Indonesia
 - Jangan tampilkan kode Python
+- Fokus pada analisa data
 
 Pertanyaan:
 {question}
 """
 
-                chat = client.chat.completions.create(
-                    messages=[{"role": "user", "content": prompt}],
-                    model="llama-3.1-8b-instant",
-                )
+            chat = client.chat.completions.create(
+                messages=[
+                    {"role": "user", "content": prompt}
+                ],
+                model="llama-3.1-8b-instant",
+            )
 
-                result_text = chat.choices[0].message.content
-
+            result_text = chat.choices[0].message.content
 
         except Exception as e:
 
@@ -671,14 +588,7 @@ Pertanyaan:
         # ====================
 
         with st.chat_message("assistant"):
-
             st.markdown(result_text)
-
-            if result_table is not None:
-                st.dataframe(result_table)
-
-            if result_chart is not None:
-                st.pyplot(result_chart)
 
         st.session_state.ai_messages.append(
             {"role": "assistant", "content": result_text}
