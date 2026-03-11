@@ -531,7 +531,7 @@ Pertanyaan:
                     "prompt": prompt,
                     "stream": False
                 },
-                timeout=60
+                timeout=300
             )
 
             answer = response.json()["response"]
