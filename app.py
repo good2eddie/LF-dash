@@ -480,7 +480,7 @@ with st.expander("Tabel Lengkap Semua Data (Riwayat)", expanded=False):
 # LOAD DATA EXCEL
 # ====================
 
-@st.cache_data
+#@st.cache_data
 def load_data():
 
     df = pd.read_excel(
