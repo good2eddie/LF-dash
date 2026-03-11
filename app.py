@@ -481,71 +481,100 @@ with st.expander("AI Data Analyst (Tanya Data)", expanded=False):
 
     st.caption("Tanyakan apa saja tentang data dashboard")
 
-    # chat history
+    # Chat history
     if "ai_messages" not in st.session_state:
         st.session_state.ai_messages = []
 
-    # tampilkan chat lama
+    # tampilkan chat sebelumnya
     for msg in st.session_state.ai_messages:
         with st.chat_message(msg["role"]):
             st.markdown(msg["content"])
 
-    # input user
+    # input pertanyaan
     question = st.chat_input("Contoh: berapa total panen kemarin?")
 
     if question:
 
-        st.session_state.ai_messages.append(
-            {"role": "user", "content": question}
-        )
+        # tampilkan pertanyaan user
+        st.session_state.ai_messages.append({"role": "user", "content": question})
 
         with st.chat_message("user"):
             st.markdown(question)
 
-        # ringkasan data untuk AI
-        summary = f"""
-Jumlah data: {len(df)}
-Kolom: {list(df.columns)}
-
-Contoh data:
-{df.head(15).to_string()}
-"""
-
-        prompt = f"""
-Anda adalah AI data analyst untuk dashboard kangkung.
-
-Gunakan data berikut untuk menjawab pertanyaan user.
-
-{summary}
-
-Pertanyaan:
-{question}
-"""
+        # ====================
+        # RINGKASAN DATA UNTUK AI
+        # ====================
 
         try:
 
-            response = requests.post(
-                "http://localhost:11434/api/generate",
-                json={
-                    "model": "phi3",
-                    "prompt": prompt,
-                    "stream": False
-                },
-                timeout=300
-            )
+            data_info = f"""
+Total baris data: {len(df)}
 
-            answer = response.json()["response"]
+Kolom tersedia:
+{", ".join(df.columns)}
+
+Contoh data:
+{df.head(10).to_string(index=False)}
+"""
+
+        except Exception as e:
+            data_info = f"Error membaca dataframe: {e}"
+
+        # ====================
+        # PROMPT UNTUK AI
+        # ====================
+
+        prompt = f"""
+Anda adalah AI Data Analyst untuk dashboard pertanian LuckyFarm.
+
+Gunakan hanya data berikut untuk menjawab pertanyaan.
+
+{data_info}
+
+Instruksi:
+- Jawab dengan singkat
+- Jika data tidak tersedia, katakan "Data tidak tersedia"
+
+Pertanyaan user:
+{question}
+"""
+
+        # ====================
+        # REQUEST KE OLLAMA
+        # ====================
+
+        try:
+
+            with st.spinner("AI sedang menganalisis data..."):
+
+                response = requests.post(
+                    "http://localhost:11434/api/generate",
+                    json={
+                        "model": "phi3",
+                        "prompt": prompt,
+                        "stream": False,
+                        "options": {
+                            "num_predict": 200,
+                            "temperature": 0.2
+                        }
+                    },
+                    timeout=300
+                )
+
+                result = response.json()
+
+                answer = result.get("response", "AI tidak memberikan jawaban.")
 
         except Exception as e:
             answer = f"AI error: {e}"
 
+        # tampilkan jawaban AI
         with st.chat_message("assistant"):
             st.markdown(answer)
 
         st.session_state.ai_messages.append(
             {"role": "assistant", "content": answer}
         )
-
 # ==================== FOOTER ====================
 st.markdown("<br><hr><p style='text-align:center;color:#888;font-size:0.9em;'>"
             "Dashboard Plan Kangkung PRO • PPIC-Eddy</p>", unsafe_allow_html=True)
