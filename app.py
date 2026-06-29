@@ -3,7 +3,6 @@ import streamlit as st
 import pandas as pd
 import requests
 import json
-from groq import Groq
 import matplotlib.pyplot as plt
 from pathlib import Path
 from datetime import date, datetime, timedelta
@@ -476,9 +475,6 @@ with st.expander("Tabel Lengkap Semua Data (Riwayat)", expanded=False):
                   if (start_tanam != today or end_tanam != today) else ""))
 
 
-import streamlit as st
-import pandas as pd
-from groq import Groq
 
 # =========================
 # LOAD DATA
@@ -556,13 +552,42 @@ Ringkasan panen 30 hari terakhir:
 {summary_harian.to_string()}
 """
 
+
 # =========================
-# GROQ CLIENT
+# AI DATA ANALYST
 # =========================
 
-client = Groq(
-    api_key="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"
-)
+import requests
+
+# =========================
+# OLLAMA CONFIG
+# =========================
+
+OLLAMA_URL = "http://localhost:11434/api/generate"
+OLLAMA_MODEL = "qwen2.5:1.5b"
+
+def tanya_ollama(prompt: str) -> str:
+    try:
+        response = requests.post(
+            OLLAMA_URL,
+            json={
+                "model": OLLAMA_MODEL,
+                "prompt": prompt,
+                "stream": False,
+                "options": {
+                    "num_ctx": 1024,
+                    "num_thread": 8,
+                    "temperature": 0.1,
+                    "repeat_penalty": 1.1
+                }
+            },
+            timeout=60
+        )
+        return response.json().get("response", "Tidak ada jawaban.")
+    except requests.exceptions.Timeout:
+        return "⚠️ Timeout — coba pertanyaan lebih singkat."
+    except Exception as e:
+        return f"⚠️ Error: {e}"
 
 # =========================
 # AI DATA ANALYST
@@ -570,7 +595,7 @@ client = Groq(
 
 with st.expander("AI Data Analyst (Tanya Data)", expanded=False):
 
-    st.caption("Tanyakan apa saja tentang data panen LuckyFarm")
+    st.caption(f"Model: `{OLLAMA_MODEL}` — Tanyakan apa saja tentang data panen LuckyFarm")
 
     if "ai_messages" not in st.session_state:
         st.session_state.ai_messages = []
@@ -592,50 +617,30 @@ with st.expander("AI Data Analyst (Tanya Data)", expanded=False):
             {"role": "user", "content": question}
         )
 
-        try:
-
-            prompt = f"""
-Anda adalah AI Data Analyst untuk dashboard pertanian LuckyFarm.
-
+        prompt = f"""Anda adalah AI Data Analyst untuk dashboard pertanian LuckyFarm.
 Gunakan informasi data berikut untuk menjawab pertanyaan.
 
 {data_info}
 
 Aturan:
-- Jawab singkat
+- Jawab singkat dan padat
 - Bahasa Indonesia
 - Fokus pada analisa data
 - Jangan tampilkan kode Python
 - Jika data tidak tersedia jawab dengan jujur
 
-Pertanyaan:
-{question}
-"""
-
-            chat = client.chat.completions.create(
-                messages=[
-                    {"role": "user", "content": prompt}
-                ],
-                model="llama-3.1-8b-instant",
-                temperature=0.2
-            )
-
-            result_text = chat.choices[0].message.content
-
-        except Exception as e:
-
-            result_text = f"Terjadi error: {e}"
-
-        # ====================
-        # TAMPILKAN HASIL
-        # ====================
+Pertanyaan: {question}
+Jawaban:"""
 
         with st.chat_message("assistant"):
+            with st.spinner("Sedang analisa..."):
+                result_text = tanya_ollama(prompt)
             st.markdown(result_text)
 
         st.session_state.ai_messages.append(
             {"role": "assistant", "content": result_text}
         )
+
 # ==================== FOOTER ====================
 st.markdown("<br><hr><p style='text-align:center;color:#888;font-size:0.9em;'>"
             "Dashboard Plan Kangkung PRO • PPIC-Eddy</p>", unsafe_allow_html=True)
