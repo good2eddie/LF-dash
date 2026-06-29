@@ -518,6 +518,7 @@ df = load_data()
 # RINGKASAN DATA UNTUK AI
 # =========================
 
+# Ringkasan 7 hari terakhir saja
 summary_harian = (
     df.groupby("tanggal_panen")
     .agg(
@@ -526,30 +527,34 @@ summary_harian = (
         total_waste=("panen_waste", "sum"),
         jumlah_bedeng=("nomor_bedeng", "count")
     )
-    .tail(30)
+    .tail(7)  # hanya 7 hari terakhir
+)
+
+# Statistik ringkas per kebun
+top_bedeng = (
+    df.groupby("kode_bedeng")["panen_net"]
+    .mean()
+    .round(2)
+    .sort_values(ascending=False)
+    .head(10)
 )
 
 data_info = f"""
-DATA DASHBOARD LUCKYFARM
+DATA LUCKYFARM (ringkasan)
+Total baris: {len(df)}
+Periode: {df['tanggal_panen'].min()} s/d {df['tanggal_panen'].max()}
 
-Jumlah baris data: {len(df)}
+STATISTIK KESELURUHAN:
+- Total Gross : {df['panen_gross'].sum():,.2f}
+- Total Net   : {df['panen_net'].sum():,.2f}
+- Total Waste : {df['panen_waste'].sum():,.2f}
+- Avg Net/Bedeng: {df['panen_net'].mean():.2f}
 
-Kolom:
-{list(df.columns)}
-
-STATISTIK PANEN
-Total Gross: {df['panen_gross'].sum():,.2f}
-Total Net: {df['panen_net'].sum():,.2f}
-Total Waste: {df['panen_waste'].sum():,.2f}
-
-Rata-rata Net per Bedeng:
-{df['panen_net'].mean():.2f}
-
-Periode panen:
-{df['tanggal_panen'].min()} sampai {df['tanggal_panen'].max()}
-
-Ringkasan panen 30 hari terakhir:
+PANEN 7 HARI TERAKHIR:
 {summary_harian.to_string()}
+
+TOP 10 BEDENG (rata-rata net):
+{top_bedeng.to_string()}
 """
 
 
